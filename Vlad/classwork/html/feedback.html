@@ -1,0 +1,27 @@
+
+<html>
+	<head>
+		<title>Simple feedback application</title>
+	</head>
+	
+	<body>
+		<form method="POST" action="/feedback/send">
+			<div>
+				<label>EMail</label>
+				<input type="email" name="user_email" required />
+			</div>
+			<div>
+				<label>Address</label>
+				<input type="text" name="user_email" required />
+			</div>
+			<div>
+				<label>Message</label>
+				<textarea name="feedback_message" required></textarea>
+			</div>
+			
+			<div>
+				<input type="submit" value="Send Your Feedback">
+			</div>
+		</form>
+	</body>
+</html>
