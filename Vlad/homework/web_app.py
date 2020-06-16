@@ -22,7 +22,6 @@ class HTTPError(Exception):
 
 
 def get_feedback(env: dict):
-    print(Path('html/feedback.html'))
     with open(Path(f'{thisfolder}/html/feedback.html'), 'rb') as fd:
         return fd.read()
 
@@ -49,7 +48,6 @@ def post_feedback(env: dict):
     payload = env['wsgi.input'].read(int( env['CONTENT_LENGTH'] ))
 
     data = parse_qs(payload.decode())
-    store_in_db(data)
 
     if len(data) != len(expected_keys):
         raise HTTPError('Bad Request', 400)
@@ -58,12 +56,35 @@ def post_feedback(env: dict):
         if key not in data:
             raise HTTPError('Bad Request', 400)
 
+    store_in_db(data)
     return get_feedback(env)
 
+def search_in_db(search:dict)  -> list :
+    initfile = os.path.join(thisfolder, 'db.json')
+
+    with open(initfile,'r') as json_db:
+        db_data = json.load(json_db)
+    if not search :
+        return 
+    find_elemets = []
+    for item in db_data:
+        for key in item :
+            if item[key][0] == search['user_search'][0]:
+                find_elemets.append(item)
+        
+    return find_elemets
 
 def get_search(env: dict):
-    pass
-
+    payload = env['QUERY_STRING']
+    data = parse_qs(payload)
+    data_from_db = search_in_db(data) 
+    if data_from_db:
+        print('find something')
+        return [f'<h2>find something</h2>'.encode()]
+          
+    with open(Path(f'{thisfolder}/html/search.html'), 'rb') as fd:
+        return fd.read()
+    
 
 def post_search(env: dict):
     pass
@@ -82,7 +103,7 @@ ROUTING_TABLE = {
     '/feedback/send': {
         'POST': post_feedback,
     },
-    '/login': {
+    '/search': {
         'GET': get_search,
         'POST': post_search,
     }
@@ -95,7 +116,6 @@ def app(env: dict, start_response: Callable) -> Iterable:
 
     route = env['PATH_INFO']
     method = env['REQUEST_METHOD']
-
     try:
         handler = ROUTING_TABLE.get(route, {}).get(method, not_found)
         response = handler(env)
