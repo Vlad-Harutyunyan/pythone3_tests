@@ -15,8 +15,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from fake_useragent import UserAgent
 from selenium.webdriver.common.action_chains import ActionChains
-from openpyxl import Workbook, load_workbook
+from selenium.webdriver.common.keys import Keys
 
+from openpyxl import Workbook, load_workbook
 
 from bs4 import BeautifulSoup as bs
 from bs4 import SoupStrainer as ss
@@ -79,24 +80,26 @@ class Scraper :
         #     'Virginia':'5460aeb05cfe8','Washington':'5c1cd29e065e3','West-Virginia':'5460aea2bc101','Wisconsin':'5460aeb061a1f','Wyoming':'5460aea2b1e26','Canada':'53be518a576fc'
         #     }
         self.STATES = {
-            'Florida - Anna Maria Island':'5460aea9bc53f','Florida - Bradenton':'5460aeac2c62f','Florida - Holmes Beach':'5460aea9bcf6c','Florida - Fort Pierce':'5460aeb785c6f',
-            'Florida - Sanford':'5460aeb785c6f','Florida - flagler county':'53e4e86935a1d','Florida - St Lucie county':'53e4e99811c37'
+            'Florida - Holmes Beach':'5460aea9bcf6c','Florida - Fort Pierce':'5460aeb785c6f',
+            'Florida - Sanford':'5460aeb785c6f','Florida - flagler county':'53e4e86935a1d','Florida - St Lucie county':'53e4e99811c37' ,
+            'Florida - Anna Maria Island':'5460aea9bc53f'
         }
         self.requests_session = requests.Session()
        
     def __open_browser(self,state):
-        url = f'https://www.casamundo.com/search/{state}'
+        url = f'https://www.casamundo.com/search/{state}?pricetype=perNight&toCenter=1'
         self.driver.get(url)
         self.driver.set_window_size(500, 1000)
         self.driver.switch_to.window(self.driver.window_handles[0])
 
-    def __scroll_down(self,current_scroll_position,speed=15,new_height=0):
+    def __scroll_down(self,current_scroll_position,speed=20,new_height=0):
         current_scroll_position, new_height= 0, 1
         while current_scroll_position <= new_height:
             current_scroll_position += speed
-            self.__driver.execute_script("window.scrollTo(0, {});".format(current_scroll_position))
-            new_height = self.__driver.execute_script("return document.body.scrollHeight")
-    
+            self.driver.execute_script(f"window.scrollTo(0, {current_scroll_position});")
+            new_height = self.driver.execute_script("return document.body.scrollHeight")
+            speed *= 1.001 
+            # speed += 1.15
 
     def __write_to_exel(self,filepath, dictionary):
         wb = Workbook(write_only=True)
@@ -118,17 +121,21 @@ class Scraper :
 
         try:
             while True:
-                time.sleep(2)
+
+                time.sleep(1.2)
                 self.driver.execute_script(f"window.scrollTo(0, document.body.scrollHeight);")
-                time.sleep(2)
+                time.sleep(1.2)
                 btn = self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR,'div[class="df jcc filter-pager offers-footer pt16 mb32 pt8-xs ph8-xs tac posr clb"]')))
                 btn.click()
 
         except:
             self.__scroll_down(current_scroll_position=0)
+            time.sleep(1)
             html = bs(self.driver.page_source, "lxml")
             items = [item for item in html.find_all('div', attrs={'data-test' : 'grid-item'})]
             res = []
+
+            stop_cnt = 0
             for x in items :
                 try :
                     obj = {}
@@ -146,11 +153,16 @@ class Scraper :
                         res.append(obj)
                 except:
                     pass
+                    # if stop_cnt > 1:
+                    #     break
+                    # else:
+                    #     stop_cnt += 1
             return res
 
     def run(self):
 
         for key in self.STATES :
+
             res = self.__get_data(self.STATES[key],key)
             
             with open(urls_path, 'a') as f_object: 
